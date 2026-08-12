@@ -7,6 +7,18 @@
         results: PokemonAPIItem[];
     }
 
+   interface PokemonAPIDetailResponse {
+  name: string;
+  id: number;
+  sprites: {
+    other: {
+      "official-artwork": {
+        front_default: string | null;
+      };
+    };
+  };
+}
+
         interface PokemonAPIItem {
         name: string;
         url: string;
@@ -47,3 +59,20 @@
             hasNextPage: Boolean(data.next),
         } as PokemonPage;
         }
+
+        export async function getPokemon(id: string) {
+            const response = await fetch(`${API_URL}/${id}`);
+
+            if(!response.ok) {
+                throw new Error("Não foi possível carregar o pokémon.");
+            }
+
+            const data = (await response.json()) as PokemonAPIDetailResponse;
+
+            return{
+                id: data.id,
+                name: data.name,
+                image: data.sprites.other["official-artwork"].front_default,
+            } as Pokemon;
+        }
+        
