@@ -29,8 +29,8 @@ export default function CameraScreen() {
   const [facing, setFacing] = useState<CameraType>("back");
   const [flash, setFlash] = useState<FlashMode>("off");
   const [takingPicture, setTakingPicture] = useState(false);
-  const [scanned, setScanned] = useState(false);
   const [mode, setMode] = useState<"scan" | "photo">("scan");
+  const scanned = useRef(false);
 
   function toggleCameraFacing() {
     setFacing((oldState) => oldState === "back" ? "front" : "back");
@@ -64,9 +64,9 @@ export default function CameraScreen() {
   }
 
   async function handleBarcodeScanned(result: BarcodeScanningResult) {
-    if (scanned) return;
+    if (scanned.current) return;
 
-    setScanned(true);
+    scanned.current = true;
 
     const pokemonId = Number(result.data);
 
@@ -76,8 +76,8 @@ export default function CameraScreen() {
         "O QR Code deve conter o ID de um Pokémon.",
         [
           {
-            text: "OK",
-            onPress: () => setScanned(false),
+            text: "Tentar novamente",
+            onPress: () => (scanned.current = false),
           },
         ],
       );
@@ -91,6 +91,7 @@ export default function CameraScreen() {
       location.coords.latitude,
       location.coords.longitude
     );
+    scanned.current = false;
     router.push(`/pokemon/${pokemonId}`);
   }
 

@@ -1,11 +1,15 @@
+
+import { CapturedPokemon, getCapturedPokemon } from "@/services/storage";
 import * as Location from "expo-location";
-import { useEffect, useState } from "react";
-import { ActivityIndicator, ActivityIndicatorComponent,
-   StyleSheet,
-   Text,
-   View 
-  } from "react-native";
-import MapView from "react-native-maps";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  View
+} from "react-native";
+import MapView, { Marker } from "react-native-maps";
 
 interface Cordinates {
   latitude: number;
@@ -13,46 +17,53 @@ interface Cordinates {
 }
 
 export default function mapScreen() {
-const [location, setLocation] = useState<Cordinates | null>(null);
-const [error, setError] = useState<string | null>(null);
+  const [location, setLocation] = useState<Cordinates | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [capturedPokemon, setCapturedPokemon] = useState<CapturedPokemon[]>([])
 
-async function getLocation() {
-  const permission = await Location.requestForegroundPermissionsAsync();
+  async function getLocation() {
+    const permission = await Location.requestForegroundPermissionsAsync();
 
-  if(permission.status !== "granted") {
-    setError("Permissão de localização negada.");
-    return;
+    if (permission.status !== "granted") {
+      setError("Permissão de localização negada.");
+      return;
+    }
+
+    const currentLocation = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.High,
+    });
+    setLocation({
+      latitude: currentLocation.coords.latitude,
+      longitude: currentLocation.coords.longitude,
+    })
   }
 
-  const currentLocation = await Location.getCurrentPositionAsync({
-    accuracy: Location.Accuracy.High,
-  });
-  setLocation({
-    latitude: currentLocation.coords.latitude,
-    longitude: currentLocation.coords.longitude,
-  })
-}
+  useEffect(() => {
+    getLocation();
+  }, []);
 
-useEffect(() => {
-  getLocation();
-}, []);
-
-if (error) {
-  return (
-<View style={styles.container}>
-  <Text style={styles.error}>{error}</Text>
-</View>
-  );
-}
-
-if(!location) {
-  return(
-    <View style={styles.container}>
-      <ActivityIndicator size="large" color="red" />
-      <Text style={styles.loadingText}>Buscando sua localização...</Text>
-    </View>
+  useFocusEffect(
+    useCallback(() => {
+      getCapturedPokemon().then((response) => setCapturedPokemon(response));
+    }, [])
   )
-}
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.error}>{error}</Text>
+      </View>
+    );
+  }
+
+  if (!location) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="red" />
+        <Text style={styles.loadingText}>Buscando sua localização...</Text>
+      </View>
+    )
+  }
 
   return (
     <MapView
@@ -60,12 +71,26 @@ if(!location) {
       initialRegion={{
         latitude: location.latitude,
         longitude: location.longitude,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
+        latitudeDelta: 0.005,
+        longitudeDelta: 0.005,
       }}
       showsUserLocation
       showsMyLocationButton
-    />
+    >
+      {capturedPokemon.map((pokemon) => (
+        <Marker
+          key={pokemon.id}
+          coordinate={{
+            latitude: pokemon.latitude,
+            longitude: pokemon.longitude,
+          }}
+          title={`Pokémon #${String(pokemon.id).padStart(4, "0")}`}
+          description="Toque para visualizar"
+          pinColor="red"
+          onPress={() => router.push(`/pokemon/${pokemon.id}`)}
+        />
+      ))}
+    </MapView>
   );
 }
 
@@ -81,10 +106,10 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   loadingText: {
-fontSize: 16,
-marginTop: 12,
+    fontSize: 16,
+    marginTop: 12,
   },
-map: {
-  height: "100%",
-},
+  map: {
+    height: "100%",
+  },
 });
